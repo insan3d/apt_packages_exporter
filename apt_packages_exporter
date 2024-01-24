@@ -1,0 +1,160 @@
+#!/usr/bin/python3
+
+"""
+Generates text file with current installed and marked APT packages and reboot
+requirement in application/openmetrics-text format to be collected by
+node_exporter.
+"""
+
+import argparse
+import contextlib
+import os
+import pathlib
+import typing
+
+import apt
+import apt.package
+import prometheus_client
+
+__version__ = "1.0-1"
+__status__ = "Release"
+__author__ = "Alexander Pozlevich"
+__email__ = "apozlevich@gmail.com"
+
+if __name__ == "__main__":
+    with contextlib.suppress(KeyboardInterrupt):
+        argument_parser = argparse.ArgumentParser(
+            prog="apt-packages-exporter",
+            description=__doc__,
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        )
+
+        argument_parser.add_argument(
+            "-v",
+            "--version",
+            action="version",
+            version=f"apt-packages-exporter v{__version__} {__status__}",
+        )
+
+        argument_parser.add_argument(
+            "-d",
+            "--dir",
+            default="/var/lib/node_exporter/textfile_collector",
+            help="specify path to textfile collection directory",
+        )
+
+        cli_args: argparse.Namespace = argument_parser.parse_args()
+        metrics_registry = prometheus_client.CollectorRegistry()
+
+        prometheus_client.Gauge(
+            namespace="apt",
+            subsystem="reboot",
+            name="required",
+            documentation="APT requires a reboot",
+            registry=metrics_registry,
+        ).set(value=int(pathlib.Path("/run/reboot-required").is_file()))
+
+        common_labels = (
+            "archive",
+            "component",
+            "label",
+            "origin",
+            "codename",
+            "site",
+            "automatic",
+            "trusted",
+        )
+
+        installed_metric = prometheus_client.Counter(
+            namespace="apt",
+            subsystem="packages",
+            name="installed",
+            documentation="Total count of installed packages by origin",
+            labelnames=(*common_labels, "state"),
+            registry=metrics_registry,
+        )
+
+        marked_metric = prometheus_client.Counter(
+            namespace="apt",
+            subsystem="packages",
+            name="marked",
+            documentation="Total count of marked packages by origin",
+            labelnames=(*common_labels, "mark"),
+            registry=metrics_registry,
+        )
+
+        apt_cache = apt.Cache()
+        apt_cache.open()
+
+        # pylint: disable=consider-using-dict-items
+        for package_name in apt_cache.keys():
+            package: apt.Package = apt_cache[package_name]
+
+            if not any((package.is_installed, package.marked_install)):
+                continue
+
+            candidate: typing.Optional[apt.Version] = package.candidate
+            if candidate is None:
+                continue
+
+            origins: typing.List[apt.package.Origin] = candidate.origins or []  # type: ignore
+            if not origins:
+                continue
+
+            origin: apt.package.Origin = origins[0]  # type: ignore
+            if not origin.site:  # type: ignore
+                continue
+
+            # type: ignore
+            origin_labels: typing.Sequence[str] = (  # type: ignore
+                origin.archive,  # type: ignore
+                origin.component,  # type: ignore
+                origin.label,  # type: ignore
+                origin.origin,  # type: ignore
+                origin.codename,  # type: ignore
+                origin.site,  # type: ignore
+                str(object=not origin.not_automatic).lower(),  # type: ignore
+                str(object=origin.trusted).lower(),  # type: ignore
+            )
+
+            if package.installed:
+                installed_metric.labels(*origin_labels, "installed").inc()
+
+            if package.is_auto_installed:
+                installed_metric.labels(*origin_labels, "auto_installed").inc()
+
+            if package.is_auto_removable:
+                installed_metric.labels(*origin_labels, "auto_removable").inc()
+
+            if package.is_inst_broken:
+                installed_metric.labels(*origin_labels, "inst_broken").inc()
+
+            if package.is_now_broken:
+                installed_metric.labels(*origin_labels, "now_broken").inc()
+
+            if package.is_upgradable:
+                installed_metric.labels(*origin_labels, "upgradable").inc()
+
+            if package.marked_delete:
+                marked_metric.labels(*origin_labels, "delete").inc()
+
+            if package.marked_downgrade:
+                marked_metric.labels(*origin_labels, "downgrade").inc()
+
+            if package.marked_install:
+                marked_metric.labels(*origin_labels, "install").inc()
+
+            if package.marked_keep:
+                marked_metric.labels(*origin_labels, "keep").inc()
+
+            if package.marked_reinstall:
+                marked_metric.labels(*origin_labels, "reinstall").inc()
+
+            if package.marked_upgrade:
+                marked_metric.labels(*origin_labels, "upgrade").inc()
+
+        os.makedirs(name=cli_args.dir, exist_ok=True)
+        prometheus_client.write_to_textfile(
+            path=str(object=pathlib.Path(cli_args.dir) / "apt.prom"),
+            registry=metrics_registry,
+        )

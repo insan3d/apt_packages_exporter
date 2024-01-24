@@ -1,0 +1,54 @@
+.Dd 24/1/24
+.Dt apt-packages-exporter 1
+.Os Linux/Debian
+
+.Sh NAME
+.Nm apt-packages-exporter
+.Nd Prometheus metrics exporter for 
+.Ar APT
+packages states
+
+.Sh SYNOPSIS
+.Nm
+.Op Fl h
+.Op Fl v
+.Op Fl d Ar DIR
+
+.Sh DESCRIPTION
+Generates text file with current installed and marked 
+.Ar APT
+packages and reboot requirement in 
+.Ar application/openmetrics-text
+format to be collected by 
+.Ar node_exporter
+.Pp
+Resulting output file with metrics will be named
+.Ar apt.prom
+
+.Sh COMMAND LINE OPTIONS
+.Bl -tag -width -indent
+.It Fl h
+show help message and exit
+.It Fl v
+show program\'s version number and exit
+.It Fl d Ar DIR
+specify path to textfile collection directory
+.El
+
+.Sh FILES
+.Bl -tag -width "/var/lib/node_exporter/textfile_collector" -compact
+.It Pa /etc/apt/apt.conf.d/50metrics
+.Ar APT
+hook configuration to run
+.Nm
+after each successfull
+.Ar update
+operation and
+.Ar dpkg
+invocation
+.It Pa /var/lib/node_exporter/textfile_collector
+Resulting metrics file directory
+
+.Sh SEE ALSO
+.Xr apt 8 ,
+.Xr apt.conf 5

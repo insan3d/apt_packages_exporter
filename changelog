@@ -1,0 +1,6 @@
+apt-packages-exporter (1.0-1) stable; urgency=low
+
+  [ Alexander Pozlevich ]
+  * Initial Release
+
+ -- Alexander Pozlevich <apozlevich@gmail.com>  Wed,  24 Jan 2024 21:00:00 +0300

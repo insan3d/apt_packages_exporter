@@ -1,0 +1,2 @@
+APT::Update::Post-Invoke-Success {"/usr/bin/apt_packages_exporter"};
+DPkg::Post-Invoke {"/usr/bin/apt_packages_exporter"};
