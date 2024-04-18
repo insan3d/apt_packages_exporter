@@ -25,7 +25,7 @@ lint-code:
 	pylint --score=n ./apt_packages_exporter
 
 check-deb:
-	lintian --pedantic --suppress-tags new-package-should-close-itp-bug deb.deb
+	lintian --pedantic --suppress-tags initial-upload-closes-no-bugs deb.deb
 
 lint: lint-code pack check-deb
 
