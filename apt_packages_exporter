@@ -16,7 +16,7 @@ import apt
 import apt.package
 import prometheus_client
 
-__version__ = "1.0-1"
+__version__ = "1.0-2"
 __status__ = "Release"
 __author__ = "Alexander Pozlevich"
 __email__ = "apozlevich@gmail.com"
@@ -93,7 +93,7 @@ if __name__ == "__main__":
             if not any((package.is_installed, package.marked_install)):
                 continue
 
-            candidate: typing.Optional[apt.Version] = package.candidate
+            candidate: typing.Optional["apt.Version"] = package.candidate
             if candidate is None:
                 continue
 
