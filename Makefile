@@ -1,10 +1,10 @@
 .PHONY: lint-code check-deb lint clean
 .INTERMEDIATE: changelog.gz apt-packages-exporter.1.gz
 
-apt-packages-exporter_1.0-1_all.deb: pack
+apt-packages-exporter_1.0-1_all.deb: deb.deb
 	mv deb.deb apt-packages-exporter_1.0-1_all.deb
 
-pack:
+deb.deb:
 	mkdir -p ./deb/usr/bin
 	mkdir -p ./deb/etc/apt/apt.conf.d
 	mkdir -p ./deb/usr/share/doc/apt-packages-exporter
@@ -27,7 +27,7 @@ lint-code:
 check-deb:
 	lintian --pedantic --suppress-tags initial-upload-closes-no-bugs deb.deb
 
-lint: lint-code pack check-deb
+lint: lint-code deb.deb check-deb
 
 clean:
 	rm -rf ./deb/etc ./deb/usr *.deb
